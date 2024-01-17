@@ -30,7 +30,15 @@ exports.createExercise = async (req, res, next) => {
         } else if (!duration) {
             next({
                 statusCode: 400,
-                message: "Missing required data(duration)",
+                message:
+                    duration === 0
+                        ? "Exercise duration cannot be 0"
+                        : "Missing required data(duration)",
+            });
+        } else if (isNaN(duration) || duration < 1 || duration % 1 !== 0) {
+            next({
+                statusCode: 400,
+                message: "Exercise duration must be a positive number(mins)",
             });
         } else {
             if (date) {
@@ -74,7 +82,7 @@ exports.getLogs = async (req, res, next) => {
     if (user) {
         let exercises = [];
         if (!from && !to) {
-            exercises = await exerciseHelper.getExercisesForUserId(id);
+            exercises = await exerciseHelper.getExercisesForUserId(id, limit);
         } else if (!from) {
             next({ statusCode: 400, message: "Missing query(from)" });
             return;
@@ -85,13 +93,12 @@ exports.getLogs = async (req, res, next) => {
             exercises = await exerciseHelper.getExercisesForUserIdBetween(
                 id,
                 from,
-                to
+                to,
+                limit
             );
         }
-        const count = exercises.length;
-        if (limit) {
-            exercises = exercises.splice(0, limit);
-        }
+
+        const count = exercises?.length ? exercises[0].count : 0;
         const logs = exercises.reduce((prevVal, currVal) => {
             prevVal.push({
                 id: currVal.exerciseId,

@@ -36,37 +36,48 @@ async function getAllExercises() {
     return exercises;
 }
 
-async function getExercisesForUserId(userId) {
+async function getExercisesForUserId(userId, limit) {
     const exercises = await SQL.all(
         `
         SELECT
-            *
+            *,
+            COUNT(*) OVER () AS count
         FROM
             Exercise
         WHERE
             userId=(?)
+        ${!!limit ? "LIMIT ?" : ""}
         `,
-        userId
+        userId,
+        !limit || isNaN(limit) ? 100 : Math.min(parseInt(limit), 100)
     );
 
     return exercises;
 }
 
-async function getExercisesForUserIdBetween(userId, from, to) {
+async function getExercisesForUserIdBetween(userId, from, to, limit) {
     const exercises = await SQL.all(
         `
         SELECT
-            *
+            *,
+            (SELECT COUNT(*) FROM Exercise WHERE userId = (?) AND date BETWEEN (?) AND (?)) AS count
         FROM
             Exercise
         WHERE
-            (userId = ?)
+            userId = (?)
         AND
-            date BETWEEN (?) and (?)
+            date BETWEEN (?) AND (?)
+        ORDER BY
+            date
+        LIMIT (?)
         `,
         userId,
         from,
-        to
+        to,
+        userId,
+        from,
+        to,
+        !limit || isNaN(limit) ? 100 : Math.min(parseInt(limit), 100)
     );
 
     return exercises;
